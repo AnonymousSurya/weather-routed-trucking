@@ -20,13 +20,13 @@ interface Props {
   visible: boolean;
 }
 
-// Calibrated heat intensities per risk level to avoid artificial accumulation
-const RISK_HEAT_WEIGHTS: Record<RiskLevel, number> = {
-  LOW: 0.08,        // Overlapping points stay strictly in emerald/green band (< 0.35)
-  MODERATE: 0.50,   // Triggers yellow band (>= 0.45)
-  HIGH: 0.72,       // Triggers orange band (>= 0.65)
-  SEVERE: 0.88,     // Triggers red band (>= 0.82)
-  NO_TRAVEL: 1.00,  // Triggers deep purple band (>= 0.96)
+// One color per risk level — exact match to route segment colors
+const RISK_COLOR: Record<RiskLevel, string> = {
+  LOW:       "#22c55e",
+  MODERATE:  "#eab308",
+  HIGH:      "#f97316",
+  SEVERE:    "#ef4444",
+  NO_TRAVEL: "#7c3aed",
 };
 
 export function WeatherHeatmapLayer({
@@ -37,17 +37,15 @@ export function WeatherHeatmapLayer({
   visible,
 }: Props) {
   const map = useMap();
-  const heatRef = useRef<L.Layer | null>(null);
+  const layersRef = useRef<L.Layer[]>([]);
 
   useEffect(() => {
-    if (heatRef.current) {
-      map.removeLayer(heatRef.current);
-      heatRef.current = null;
-    }
+    // Remove all previous layers
+    layersRef.current.forEach((l) => map.removeLayer(l));
+    layersRef.current = [];
 
     if (!visible || !routes.length) return;
 
-    // Focus heatmap corridor on the selected route to avoid multi-route stacking
     const targetRoute =
       routes.find((r) => r.index === selectedRouteIndex) ?? routes[0];
     if (!targetRoute) return;
@@ -56,61 +54,48 @@ export function WeatherHeatmapLayer({
     const coords = targetRoute.geometry?.coordinates ?? [];
     if (!coords.length || !cps.length) return;
 
-    const heatPoints: Array<[number, number, number]> = [];
+    // Compute risk level for each checkpoint
+    const cpLevels: RiskLevel[] = cps.map((cp) =>
+      evaluateCheckpointRisk(cp, forecastHourOffset, loadWeightLbs).level
+    );
 
-    // Precalculate risk weight for each checkpoint at this forecast offset
-    const cpRiskWeights = cps.map((cp) => {
-      const risk = evaluateCheckpointRisk(cp, forecastHourOffset, loadWeightLbs);
-      return RISK_HEAT_WEIGHTS[risk.level] ?? 0.08;
-    });
+    // Group geometry points by the risk level of their nearest checkpoint
+    const pointsByLevel: Partial<Record<RiskLevel, Array<[number, number, number]>>> = {};
 
-    if (cps.length <= 1) {
-      const w = cpRiskWeights[0] ?? 0.08;
-      for (let i = 0; i < coords.length; i += 10) {
-        heatPoints.push([coords[i][1], coords[i][0], w]);
+    const step = Math.max(1, Math.floor(coords.length / 80));
+    for (let g = 0; g < coords.length; g += step) {
+      const [lon, lat] = coords[g];
+
+      let nearestCpIdx = 0;
+      let minDist = Infinity;
+      for (let c = 0; c < cps.length; c++) {
+        const d = Math.hypot(cps[c].lat - lat, cps[c].lon - lon);
+        if (d < minDist) { minDist = d; nearestCpIdx = c; }
       }
-    } else {
-      const step = Math.max(1, Math.floor(coords.length / 60));
-      for (let g = 0; g < coords.length; g += step) {
-        const [lon, lat] = coords[g];
 
-        // Use risk of nearest checkpoint by distance
-        let nearestCpIdx = 0;
-        let minDist = Infinity;
-        for (let c = 0; c < cps.length; c++) {
-          const d = Math.hypot(cps[c].lat - lat, cps[c].lon - lon);
-          if (d < minDist) { minDist = d; nearestCpIdx = c; }
-        }
-
-        heatPoints.push([lat, lon, cpRiskWeights[nearestCpIdx] ?? 0.08]);
-      }
+      const level = cpLevels[nearestCpIdx];
+      if (!pointsByLevel[level]) pointsByLevel[level] = [];
+      pointsByLevel[level]!.push([lat, lon, 0.8]);
     }
 
-    if (heatPoints.length === 0) return;
-
-    const heat = L.heatLayer(heatPoints, {
-      radius: 26,
-      blur: 20,
-      max: 1.0,
-      minOpacity: 0.20,
-      gradient: {
-        0.10: "#059669", // Emerald green (Low)
-        0.25: "#10b981", // Light teal/green (Low)
-        0.45: "#eab308", // Yellow (Moderate)
-        0.65: "#f97316", // Orange (High)
-        0.82: "#ef4444", // Red (Severe)
-        0.96: "#7c3aed", // Purple (No Travel)
-      },
-    });
-
-    heat.addTo(map);
-    heatRef.current = heat;
+    // One heatmap layer per risk level — no cross-color blending
+    for (const [level, pts] of Object.entries(pointsByLevel)) {
+      if (!pts?.length) continue;
+      const color = RISK_COLOR[level as RiskLevel] ?? "#22c55e";
+      const heat = L.heatLayer(pts, {
+        radius: 18,
+        blur: 10,
+        max: 1.0,
+        minOpacity: 0.0,
+        gradient: { 0.3: color, 1.0: color },
+      });
+      heat.addTo(map);
+      layersRef.current.push(heat);
+    }
 
     return () => {
-      if (heatRef.current) {
-        map.removeLayer(heatRef.current);
-        heatRef.current = null;
-      }
+      layersRef.current.forEach((l) => map.removeLayer(l));
+      layersRef.current = [];
     };
   }, [map, routes, selectedRouteIndex, forecastHourOffset, loadWeightLbs, visible]);
 
