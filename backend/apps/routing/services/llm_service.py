@@ -39,12 +39,13 @@ def _build_prompt(routes_data: List[dict], recommended_index: int, load_weight_l
 Route Analysis:
 {routes_text}
 
-Route {recommended_index + 1} ({recommended_name}) is recommended.
+The recommended route is: {recommended_name}
 
-Write a 3-4 sentence safety briefing for the driver. Mention:
-1. Why the recommended route is safest given the weather and load
-2. The main hazard(s) on the alternative routes
-3. Any specific caution for the recommended route itself
+Write a 3-4 sentence safety briefing for the driver. Rules:
+- Always refer to routes by their NAME (e.g. "{recommended_name}"), never by number (never say "Route 1" or "Route 2")
+- Mention why {recommended_name} is the best choice given the weather and load weight
+- Mention the main hazard(s) on the other routes by name
+- Note any specific caution for {recommended_name} itself
 
 Be direct, specific, and professional. Do not use markdown or bullet points."""
 
