@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 ORS_BASE = "https://api.openrouteservice.org"
 METERS_TO_MILES = 0.000621371
-ORS_DISTANCE_LIMIT_CODE = 2004
 
 
 @dataclass
@@ -117,56 +116,12 @@ def fetch_routes(
     dest_lon: float,
 ) -> List[RouteOption]:
     """
-    Fetch 3 HGV route options synchronously.
+    Fetch 3 HGV route options using distinct ORS preference requests.
 
-    Tries ORS alternative_routes first (< 100 km limit).
-    Falls back to 3 concurrent preference-based requests for long routes.
+    Always uses 3 separate preference-based requests (fastest / shortest / balanced)
+    so routes are optimized for genuinely different goals and are more likely to
+    follow different roads.
     """
-    url = f"{ORS_BASE}/v2/directions/driving-hgv/json"
-    headers = {
-        "Authorization": settings.ORS_API_KEY,
-        "Content-Type": "application/json",
-    }
-    alt_body = {
-        "coordinates": [[origin_lon, origin_lat], [dest_lon, dest_lat]],
-        "alternative_routes": {
-            "target_count": 3,
-            "weight_factor": 1.6,
-            "share_factor": 0.6,
-        },
-        "geometry": True,
-        "instructions": False,
-        "geometry_simplify": False,
-        "radiuses": [-1, -1],
-    }
-
-    try:
-        with httpx.Client(timeout=30.0) as client:
-            resp = client.post(url, headers=headers, json=alt_body)
-            resp.raise_for_status()
-            data = resp.json()
-        route_names = ["Fastest", "Shortest", "Balanced"]
-        routes = [
-            _parse_ors_route(r, i, route_names[i])
-            for i, r in enumerate(data.get("routes", [])[:3])
-        ]
-        if len(routes) == 3:
-            return routes
-        logger.info(
-            "ORS returned only %d alternative(s), falling back to preferences", len(routes)
-        )
-    except httpx.HTTPStatusError as exc:
-        err = exc.response.json().get("error", {})
-        if err.get("code") == ORS_DISTANCE_LIMIT_CODE:
-            logger.info(
-                "Route exceeds alternative_routes limit, using preference fallback"
-            )
-        else:
-            raise RoutingError(
-                f"ORS alternative_routes returned {exc.response.status_code}"
-            ) from exc
-
-    # Sequential fallback: 3 preferences (ORS rate-limits burst concurrent requests)
     preferences = [
         ("fastest", "Fastest"),
         ("shortest", "Shortest"),
