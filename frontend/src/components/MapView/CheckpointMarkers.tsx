@@ -11,30 +11,19 @@ interface Props {
   loadWeightLbs: number;
 }
 
-// Distinct, modern Origin (A) and Destination (B) Pin Badges
-const originIcon = L.divIcon({
-  className: "origin-pin-icon",
-  html: `
-    <div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#10b981;border:2.5px solid #ffffff;box-shadow:0 10px 20px rgba(0,0,0,0.4);color:#ffffff;font-weight:900;font-size:14px;font-family:system-ui, sans-serif;cursor:pointer;">
-      A
-    </div>
-  `,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-  popupAnchor: [0, -18],
-});
-
-const destIcon = L.divIcon({
-  className: "dest-pin-icon",
-  html: `
-    <div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#ef4444;border:2.5px solid #ffffff;box-shadow:0 10px 20px rgba(0,0,0,0.4);color:#ffffff;font-weight:900;font-size:14px;font-family:system-ui, sans-serif;cursor:pointer;">
-      B
-    </div>
-  `,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-  popupAnchor: [0, -18],
-});
+function makeEndpointIcon(label: string, riskColor: string) {
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:${riskColor};border:2.5px solid #ffffff;box-shadow:0 10px 20px rgba(0,0,0,0.4);color:#ffffff;font-weight:900;font-size:14px;font-family:system-ui, sans-serif;cursor:pointer;">
+        ${label}
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -18],
+  });
+}
 
 export function CheckpointMarkers({
   checkpoints,
@@ -87,13 +76,13 @@ export function CheckpointMarkers({
           </Popup>
         );
 
-        // If Origin or Destination: Render clear A / B badges
+        // If Origin or Destination: Render A / B badges colored by risk
         if (isOrigin || isDest) {
           return (
             <Marker
               key={cp.index}
               position={[cp.lat, cp.lon]}
-              icon={isOrigin ? originIcon : destIcon}
+              icon={makeEndpointIcon(isOrigin ? "A" : "B", risk.color)}
             >
               {popupContent}
             </Marker>
