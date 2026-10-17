@@ -20,10 +20,12 @@ def _build_prompt(routes_data: List[dict], recommended_index: int, load_weight_l
     summaries = []
     for r in routes_data:
         s = r["risk_summary"]
+        hours = int(r['duration_hours'])
+        mins = round((r['duration_hours'] - hours) * 60)
         summaries.append(
             f"Route {r['index'] + 1} ({r['name']}): "
             f"{r['distance_miles']:.0f} mi, "
-            f"{r['duration_hours']:.1f}h, "
+            f"{hours}h {mins}m, "
             f"No-Travel={s['no_travel_miles']:.1f}mi, "
             f"Severe={s['severe_miles']:.1f}mi, "
             f"High={s['high_miles']:.1f}mi, "
