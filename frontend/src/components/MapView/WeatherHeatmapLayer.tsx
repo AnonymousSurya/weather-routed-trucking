@@ -83,11 +83,11 @@ export function WeatherHeatmapLayer({
       if (!pts?.length) continue;
       const color = RISK_COLOR[level as RiskLevel] ?? "#22c55e";
       const heat = L.heatLayer(pts, {
-        radius: 18,
-        blur: 10,
+        radius: 25,
+        blur: 15,
         max: 1.0,
-        minOpacity: 0.0,
-        gradient: { 0.3: color, 1.0: color },
+        minOpacity: 0.35,
+        gradient: { 0.1: color, 1.0: color },
       });
       heat.addTo(map);
       layersRef.current.push(heat);
