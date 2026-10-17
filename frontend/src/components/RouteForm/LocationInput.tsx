@@ -34,12 +34,17 @@ export function LocationInput({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const justSelectedRef = useRef(false);
+  const userTypingRef = useRef(false);
 
   // Debounced search via Open-Meteo Geocoding API
   useEffect(() => {
-    // If the value changed because the user just tapped a suggestion, don't re-search!
     if (justSelectedRef.current) {
       justSelectedRef.current = false;
+      return;
+    }
+
+    // Only search when the user is actually typing, not when a preset sets the value
+    if (!userTypingRef.current) {
       return;
     }
 
@@ -90,6 +95,7 @@ export function LocationInput({
 
   const handleSelect = (s: Suggestion) => {
     justSelectedRef.current = true;
+    userTypingRef.current = false;
     const parts = [s.name, s.admin1, s.country_code ?? s.country].filter(Boolean);
     const formatted = parts.join(", ");
     setIsOpen(false);
@@ -128,6 +134,7 @@ export function LocationInput({
           type="text"
           value={value}
           onChange={(e) => {
+            userTypingRef.current = true;
             justSelectedRef.current = false;
             onChange(e.target.value);
           }}
