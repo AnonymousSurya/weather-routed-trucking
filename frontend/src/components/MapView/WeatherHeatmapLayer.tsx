@@ -70,32 +70,19 @@ export function WeatherHeatmapLayer({
         heatPoints.push([coords[i][1], coords[i][0], w]);
       }
     } else {
-      // Map each checkpoint to its closest geometry coordinate index
-      const cpGeoIdx = cps.map((cp) => {
-        let minDist = Infinity;
-        let idx = 0;
-        for (let g = 0; g < coords.length; g++) {
-          const d = Math.hypot(coords[g][1] - cp.lat, coords[g][0] - cp.lon);
-          if (d < minDist) { minDist = d; idx = g; }
-        }
-        return idx;
-      });
-
-      // For each geometry point, find which segment [cp_i → cp_{i+1}] it belongs to
-      // by checking its index against the checkpoint geometry indices.
-      // Use dense sampling (every 3rd point) so transitions are sharp at boundaries.
       const step = Math.max(1, Math.floor(coords.length / 60));
       for (let g = 0; g < coords.length; g += step) {
         const [lon, lat] = coords[g];
 
-        // Find which segment this geometry point belongs to
-        let segIdx = 0;
-        for (let c = 0; c < cpGeoIdx.length - 1; c++) {
-          if (g >= cpGeoIdx[c]) segIdx = c;
+        // Use risk of nearest checkpoint by distance
+        let nearestCpIdx = 0;
+        let minDist = Infinity;
+        for (let c = 0; c < cps.length; c++) {
+          const d = Math.hypot(cps[c].lat - lat, cps[c].lon - lon);
+          if (d < minDist) { minDist = d; nearestCpIdx = c; }
         }
 
-        const weight = cpRiskWeights[segIdx] ?? 0.08;
-        heatPoints.push([lat, lon, weight]);
+        heatPoints.push([lat, lon, cpRiskWeights[nearestCpIdx] ?? 0.08]);
       }
     }
 
