@@ -145,7 +145,7 @@ def fetch_routes(
             resp = client.post(url, headers=headers, json=alt_body)
             resp.raise_for_status()
             data = resp.json()
-        route_names = ["Fastest", "Balanced", "Scenic"]
+        route_names = ["Fastest", "Shortest", "Balanced"]
         routes = [
             _parse_ors_route(r, i, route_names[i])
             for i, r in enumerate(data.get("routes", [])[:3])
@@ -170,7 +170,7 @@ def fetch_routes(
     preferences = [
         ("fastest", "Fastest"),
         ("shortest", "Shortest"),
-        ("recommended", "Recommended"),
+        ("recommended", "Balanced"),
     ]
     routes: List[RouteOption] = []
     for idx, (pref, name) in enumerate(preferences):
