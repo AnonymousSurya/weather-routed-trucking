@@ -20,7 +20,7 @@ from ..exceptions import GeocodingError, RoutingError
 
 logger = logging.getLogger(__name__)
 
-ORS_BASE = "https://api.heigit.org"
+ORS_BASE = "https://api.heigit.org/ors"
 METERS_TO_MILES = 0.000621371
 
 
