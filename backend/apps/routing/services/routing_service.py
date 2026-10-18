@@ -1,14 +1,13 @@
 """
-OpenRouteService integration (synchronous).
+OpenRouteService integration.
 
-Strategy:
-  1. Try ORS alternative_routes (works for routes ≤ 100 km).
-  2. Fallback: 3 sequential preference requests (fastest / shortest / recommended).
-     Sequential avoids ORS rate-limit rejections on burst concurrent calls.
+Fetches 3 route options concurrently via ThreadPoolExecutor
+(fastest / shortest / balanced) so total wait = slowest single request.
 
 Coordinates returned are (lat, lon) pairs; ORS uses (lon, lat) internally.
 """
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import List, Tuple
 
@@ -121,19 +120,26 @@ def fetch_routes(
     follow different roads.
     """
     preferences = [
-        ("fastest", "Fastest"),
-        ("shortest", "Shortest"),
-        ("recommended", "Balanced"),
+        (0, "fastest", "Fastest"),
+        (1, "shortest", "Shortest"),
+        (2, "recommended", "Balanced"),
     ]
     routes: List[RouteOption] = []
-    for idx, (pref, name) in enumerate(preferences):
-        try:
-            r = _fetch_single_preference(
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {
+            executor.submit(
+                _fetch_single_preference,
                 origin_lon, origin_lat, dest_lon, dest_lat, pref, idx, name
-            )
-            routes.append(r)
-        except Exception as exc:
-            logger.error("Preference route %r failed: %s", name, exc)
+            ): name
+            for idx, pref, name in preferences
+        }
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                routes.append(future.result())
+            except Exception as exc:
+                logger.error("Preference route %r failed: %s", name, exc)
 
     if not routes:
         raise RoutingError("No routes returned from OpenRouteService")
