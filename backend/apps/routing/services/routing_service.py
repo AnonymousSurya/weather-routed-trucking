@@ -80,7 +80,6 @@ def _fetch_single_preference(
     index: int,
     name: str,
 ) -> RouteOption:
-    url = f"{ORS_BASE}/v2/directions/driving-hgv/json"
     headers = {
         "Authorization": settings.ORS_API_KEY,
         "Content-Type": "application/json",
@@ -91,21 +90,22 @@ def _fetch_single_preference(
         "geometry": True,
         "instructions": False,
         "geometry_simplify": False,
-        "radiuses": [-1, -1],  # unlimited snapping to routable points
+        "radiuses": [-1, -1],
     }
-    try:
-        with httpx.Client(timeout=60.0) as client:
-            resp = client.post(url, headers=headers, json=body)
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as exc:
-        raise RoutingError(
-            f"ORS returned {exc.response.status_code} for preference={preference}"
-        ) from exc
-    routes = data.get("routes", [])
-    if not routes:
-        raise RoutingError(f"No route data for preference={preference}")
-    return _parse_ors_route(routes[0], index, name)
+    timeouts = {"driving-hgv": 8.0, "driving-car": 30.0}
+    for profile in ("driving-hgv", "driving-car"):
+        url = f"{ORS_BASE}/v2/directions/{profile}/json"
+        try:
+            with httpx.Client(timeout=timeouts[profile]) as client:
+                resp = client.post(url, headers=headers, json=body)
+                resp.raise_for_status()
+                data = resp.json()
+            routes = data.get("routes", [])
+            if routes:
+                return _parse_ors_route(routes[0], index, name)
+        except Exception as exc:
+            logger.warning("Profile %r failed for preference=%s: %s — trying fallback", profile, preference, exc)
+    raise RoutingError(f"No route data for preference={preference}")
 
 
 def fetch_routes(
