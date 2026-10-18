@@ -2,7 +2,7 @@
 
 > A production-grade full-stack application that helps truck drivers choose the safest route based on real-time weather forecasts, load weight, and travel time.
 
-![CI](https://github.com/your-org/weather-truck-routing/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/AnonymousSurya/weather-routed-trucking/actions/workflows/ci.yml/badge.svg)
 
 ---
 
@@ -28,7 +28,7 @@
 | Backend | Django 5, Django REST Framework |
 | Routing API | OpenRouteService (free tier) |
 | Weather API | Open-Meteo (free, no key needed) |
-| LLM | Groq — llama-3.3-70b-versatile |
+| LLM | Groq — Qwen 3.8 27B |
 | CI/CD | GitHub Actions |
 
 ---
@@ -170,9 +170,11 @@ weather-truck-routing/
 
 ## Deployment
 
-**Backend:** Deploy to [Railway](https://railway.app) or [Render](https://render.com) — both support Python with free tiers.
+**Live Demo:** [https://weather-routed-trucking.vercel.app](https://weather-routed-trucking.vercel.app)
 
-**Frontend:** Deploy to [Vercel](https://vercel.com) — set `VITE_API_URL` to your backend URL.
+**Backend:** Deployed on [Railway](https://railway.app) — `https://weather-routed-trucking-production.up.railway.app`
+
+**Frontend:** Deployed on [Vercel](https://vercel.com) — set `VITE_API_URL` to your backend URL when self-hosting.
 
 ---
 

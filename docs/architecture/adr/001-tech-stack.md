@@ -39,7 +39,7 @@ We need to build a weather-aware truck routing web application that:
 - `leaflet.heat` for heatmap overlay
 - Risk-coloured polyline segments between checkpoints
 
-### LLM: Groq (llama-3.3-70b-versatile)
+### LLM: Groq (Qwen 3.8 27B)
 - Free tier, extremely fast inference
 - Used for natural language safety briefing
 
