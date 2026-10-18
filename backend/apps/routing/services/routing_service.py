@@ -92,7 +92,7 @@ def _fetch_single_preference(
         "geometry_simplify": False,
         "radiuses": [-1, -1],
     }
-    timeouts = {"driving-hgv": 8.0, "driving-car": 30.0}
+    timeouts = {"driving-hgv": 8.0, "driving-car": 60.0}
     for profile in ("driving-hgv", "driving-car"):
         url = f"{ORS_BASE}/v2/directions/{profile}/json"
         try:
