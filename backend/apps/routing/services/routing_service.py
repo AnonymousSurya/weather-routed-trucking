@@ -35,24 +35,22 @@ class RouteOption:
 
 
 def geocode(address: str) -> Tuple[float, float]:
-    """Return (lat, lon) for a free-text address."""
-    url = f"{ORS_BASE}/geocode/search"
-    headers = {"Authorization": settings.ORS_API_KEY}
-    params = {"text": address, "size": 1}
+    """Return (lat, lon) for a free-text address via Nominatim (OSM)."""
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {"q": address, "format": "json", "limit": 1}
+    headers = {"User-Agent": "WeatherRoutedTrucking/1.0"}
     try:
         with httpx.Client(timeout=10.0) as client:
-            resp = client.get(url, headers=headers, params=params)
+            resp = client.get(url, params=params, headers=headers)
             resp.raise_for_status()
             data = resp.json()
     except httpx.HTTPStatusError as exc:
         raise GeocodingError(
             f"Geocoding service returned {exc.response.status_code} for {address!r}"
         ) from exc
-    features = data.get("features", [])
-    if not features:
+    if not data:
         raise GeocodingError(f"Could not geocode address: {address!r}")
-    lon, lat = features[0]["geometry"]["coordinates"]
-    return lat, lon
+    return float(data[0]["lat"]), float(data[0]["lon"])
 
 
 def _parse_ors_route(route: dict, index: int, name: str) -> RouteOption:
