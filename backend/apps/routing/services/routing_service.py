@@ -92,7 +92,7 @@ def _fetch_single_preference(
         "radiuses": [-1, -1],  # unlimited snapping to routable points
     }
     try:
-        with httpx.Client(timeout=30.0) as client:
+        with httpx.Client(timeout=60.0) as client:
             resp = client.post(url, headers=headers, json=body)
             resp.raise_for_status()
             data = resp.json()
@@ -120,26 +120,19 @@ def fetch_routes(
     follow different roads.
     """
     preferences = [
-        (0, "fastest", "Fastest"),
-        (1, "shortest", "Shortest"),
-        (2, "recommended", "Balanced"),
+        ("fastest", "Fastest"),
+        ("shortest", "Shortest"),
+        ("recommended", "Balanced"),
     ]
     routes: List[RouteOption] = []
-
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        futures = {
-            executor.submit(
-                _fetch_single_preference,
+    for idx, (pref, name) in enumerate(preferences):
+        try:
+            r = _fetch_single_preference(
                 origin_lon, origin_lat, dest_lon, dest_lat, pref, idx, name
-            ): name
-            for idx, pref, name in preferences
-        }
-        for future in as_completed(futures):
-            name = futures[future]
-            try:
-                routes.append(future.result())
-            except Exception as exc:
-                logger.error("Preference route %r failed: %s", name, exc)
+            )
+            routes.append(r)
+        except Exception as exc:
+            logger.error("Preference route %r failed: %s", name, exc)
 
     if not routes:
         raise RoutingError("No routes returned from OpenRouteService")
